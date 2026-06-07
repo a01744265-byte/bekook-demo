@@ -203,6 +203,29 @@
   .day-tag { display: inline-block; background: #E5F6F1; color: #0a7a6b; border-radius: 4px; padding: 1px 5px; font-size: 11px; font-weight: 500; margin-right: 4px; }
   .total-line { font-size: 12.5px; color: #333; padding: 6px 12px 8px; border-top: 0.5px solid #eee; }
   .total-bold { font-weight: 500; color: #128C7E; }
+
+  /* PUNTO CARD */
+  .punto-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    align-self: flex-start;
+    max-width: 92%;
+    border: 0.5px solid #ddd;
+  }
+  .punto-card-header { background: #128C7E; color: white; padding: 8px 12px; font-size: 13px; font-weight: 500; }
+  .punto-option {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+    border-bottom: 0.5px solid #f5f5f5;
+    font-size: 13px;
+    color: #333;
+    transition: background 0.15s;
+  }
+  .punto-option:last-of-type { border-bottom: none; }
+  .punto-option input[type=radio] { accent-color: #128C7E; }
+  .punto-option.selected { font-weight: 500; color: #128C7E; background: #f0faf8; }
 </style>
 
 <div class="wa-shell">
@@ -217,6 +240,7 @@
 
   <div class="wa-body" id="chatBody">
 
+    <!-- STEP 0: Hola -->
     <div class="step active" id="step0">
       <div class="bubble bot">
         Escribe <strong>Hola</strong> para comenzar tu pedido 👇
@@ -228,12 +252,37 @@
       </div>
     </div>
 
+    <!-- STEP 1: Selección de punto de recogida (NUEVO) -->
     <div class="step" id="step1">
       <div class="bubble user">Hola <div class="time">10:01</div></div>
       <div class="bubble bot">
         ¡Hola! 👋 Bienvenid@ a <strong>BeKook</strong>, tu comida casera en Culiacán.<br><br>
-        Aquí tienes el <strong>menú de esta semana</strong> 🍲
+        ¿En qué punto vas a <strong>recoger tu pedido</strong>? 📍
         <div class="time">10:01</div>
+      </div>
+      <div class="punto-card">
+        <div class="punto-card-header">📍 Selecciona tu punto de recogida</div>
+        <label class="punto-option" id="pOpt0">
+          <input type="radio" name="punto" value="Ciudad Universitaria" onchange="selectPunto('Ciudad Universitaria', 0)">
+          🎓 Ciudad Universitaria
+        </label>
+        <label class="punto-option" id="pOpt1">
+          <input type="radio" name="punto" value="Corporativos Coppel Los Álamos" onchange="selectPunto('Corporativos Coppel Los Álamos', 1)">
+          🏢 Corporativos Coppel Los Álamos
+        </label>
+        <label class="punto-option" id="pOpt2">
+          <input type="radio" name="punto" value="Unidad de Servicios Estatales" onchange="selectPunto('Unidad de Servicios Estatales', 2)">
+          🏛️ Unidad de Servicios Estatales
+        </label>
+        <button class="poll-submit" onclick="submitPunto()">Confirmar punto ✓</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Menú + encuesta -->
+    <div class="step" id="step2">
+      <div class="bubble bot">
+        Aquí tienes el <strong>menú de esta semana</strong> 🍲
+        <div class="time">10:02</div>
       </div>
       <div class="menu-card">
         <div class="menu-header">📋 Menú Semana — BeKook</div>
@@ -270,7 +319,7 @@
       </div>
       <div class="bubble bot">
         Escoge tu platillo para cada día en la encuesta 👇
-        <div class="time">10:01</div>
+        <div class="time">10:02</div>
       </div>
       <div class="wa-poll" id="pollCard">
         <div class="poll-header">📝 ¿Qué quieres comer esta semana?</div>
@@ -280,17 +329,9 @@
       </div>
     </div>
 
-    <div class="step" id="step2">
-    </div>
-
-    <div class="step" id="step3">
-    </div>
-
-    <div class="step" id="step4">
-    </div>
-
-    <div class="step" id="step5">
-    </div>
+    <div class="step" id="step3"></div>
+    <div class="step" id="step4"></div>
+    <div class="step" id="step5"></div>
 
   </div>
 </div>
@@ -306,9 +347,32 @@ const menu = [
 ];
 let selections = {};
 let payMethod = '';
+let puntoSeleccionado = '';
+
+function sendHola() {
+  document.getElementById('step0').classList.remove('active');
+  document.getElementById('step1').classList.add('active');
+  scroll();
+}
+
+function selectPunto(val, idx) {
+  puntoSeleccionado = val;
+  [0,1,2].forEach(i => {
+    document.getElementById('pOpt' + i).classList.toggle('selected', i === idx);
+  });
+}
+
+function submitPunto() {
+  if (!puntoSeleccionado) { alert('Elige un punto de recogida 😊'); return; }
+  document.getElementById('step1').classList.remove('active');
+  document.getElementById('step2').classList.add('active');
+  buildPoll();
+  scroll();
+}
 
 function buildPoll() {
   const container = document.getElementById('pollDays');
+  container.innerHTML = '';
   menu.forEach((d, di) => {
     const sec = document.createElement('div');
     sec.className = 'poll-day-section';
@@ -332,19 +396,9 @@ function selectOpt(di, oi) {
   });
 }
 
-function sendHola() {
-  document.getElementById('step0').classList.remove('active');
-  document.getElementById('step1').classList.add('active');
-  buildPoll();
-  scroll();
-}
-
 function submitPoll() {
   const missing = menu.findIndex((_, i) => selections[i] === undefined);
-  if (missing !== -1) {
-    alert(`Falta elegir el platillo del ${menu[missing].day} 😊`);
-    return;
-  }
+  if (missing !== -1) { alert(`Falta elegir el platillo del ${menu[missing].day} 😊`); return; }
   let total = 0;
   let summary = menu.map((d, i) => {
     const opt = d.opts[selections[i]];
@@ -352,13 +406,17 @@ function submitPoll() {
     return `<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0;"><span><span class="day-tag">${d.day}</span>${opt.name}</span><span style="color:#128C7E;font-weight:500;margin-left:8px;">$${opt.price}</span></div>`;
   }).join('');
 
-  const step2 = document.getElementById('step2');
-  step2.innerHTML = `
+  const step3 = document.getElementById('step3');
+  step3.innerHTML = `
     <div class="bubble user">✅ Pedido confirmado<div class="time">10:05</div></div>
     <div class="bubble bot">¡Perfecto! Aquí está tu resumen 🧾<div class="time">10:05</div></div>
     <div class="clabe-card">
       <div class="clabe-header">🧾 Tu pedido de la semana</div>
-      <div class="clabe-body">${summary}</div>
+      <div class="clabe-body">
+        <div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:6px;">Punto de recogida</div>
+        <div style="font-size:13px;font-weight:500;color:#128C7E;margin-bottom:10px;">📍 ${puntoSeleccionado}</div>
+        ${summary}
+      </div>
       <div class="total-line">Total de la semana: <span class="total-bold">$${total} MXN</span></div>
     </div>
     <div class="bubble bot">¿Cómo prefieres pagar? 💳<div class="time">10:05</div></div>
@@ -369,8 +427,8 @@ function submitPoll() {
       <button class="poll-submit" onclick="submitPay()">Confirmar pago ✓</button>
     </div>
   `;
-  document.getElementById('step1').classList.remove('active');
-  step2.classList.add('active');
+  document.getElementById('step2').classList.remove('active');
+  step3.classList.add('active');
   scroll();
 }
 
@@ -378,18 +436,18 @@ function selectPay(v) { payMethod = v; }
 
 function submitPay() {
   if (!payMethod) { alert('Elige un método de pago 😊'); return; }
+  const step4 = document.getElementById('step4');
   const step3 = document.getElementById('step3');
-  const step2 = document.getElementById('step2');
   if (payMethod === 'efectivo') {
-    step3.innerHTML = `
+    step4.innerHTML = `
       <div class="bubble user">💵 Pagaré en efectivo<div class="time">10:06</div></div>
-      <div class="bubble bot">¡Anotado! Pagarás al recoger tu comida 🙌<br>Aquí está tu código de confirmación para mostrar al recoger 👇<div class="time">10:06</div></div>
+      <div class="bubble bot">¡Anotado! Pagarás al recoger tu comida en <strong>${puntoSeleccionado}</strong> 🙌<br>Aquí está tu código de confirmación para mostrar al recoger 👇<div class="time">10:06</div></div>
     `;
-    step2.classList.remove('active');
-    step3.classList.add('active');
-    showQR(step3, 'EFECTIVO');
+    step3.classList.remove('active');
+    step4.classList.add('active');
+    showQR(step4, 'EFECTIVO');
   } else {
-    step3.innerHTML = `
+    step4.innerHTML = `
       <div class="bubble user">🏦 Pagaré por transferencia<div class="time">10:06</div></div>
       <div class="bubble bot">¡Perfecto! Realiza tu transferencia a esta cuenta 👇<div class="time">10:06</div></div>
       <div class="clabe-card">
@@ -407,22 +465,22 @@ function submitPay() {
         <button class="wa-send-btn" onclick="confirmTransfer()">➤</button>
       </div>
     `;
-    step2.classList.remove('active');
-    step3.classList.add('active');
+    step3.classList.remove('active');
+    step4.classList.add('active');
     scroll();
   }
 }
 
 function confirmTransfer() {
+  const step5 = document.getElementById('step5');
   const step4 = document.getElementById('step4');
-  const step3 = document.getElementById('step3');
   const input = document.getElementById('compInput');
   const txt = input ? input.value || 'Transferencia enviada' : 'Transferencia enviada';
-  step4.innerHTML = `<div class="bubble user">${txt} ✅<div class="time">10:08</div></div>
-    <div class="bubble bot">¡Listo! Comprobante recibido 🎉 Aquí está tu código QR para recoger tu pedido 👇<div class="time">10:08</div></div>`;
-  step3.classList.remove('active');
-  step4.classList.add('active');
-  showQR(step4, 'SPEI');
+  step5.innerHTML = `<div class="bubble user">${txt} ✅<div class="time">10:08</div></div>
+    <div class="bubble bot">¡Listo! Comprobante recibido 🎉 Aquí está tu código QR para recoger tu pedido en <strong>${puntoSeleccionado}</strong> 👇<div class="time">10:08</div></div>`;
+  step4.classList.remove('active');
+  step5.classList.add('active');
+  showQR(step5, 'SPEI');
 }
 
 function showQR(container, tipo) {
@@ -436,6 +494,7 @@ function showQR(container, tipo) {
         <canvas id="qrCanvas" width="150" height="150"></canvas>
       </div>
       <div class="qr-num" style="font-weight:500;font-size:13px;">Folio: ${folio}</div>
+      <div class="qr-num">📍 ${puntoSeleccionado}</div>
       <div class="qr-num">Pago: ${tipo === 'SPEI' ? '🏦 Transferencia' : '💵 Efectivo'}</div>
       <div class="qr-inst" style="margin-top:6px;background:#E5F6F1;border-radius:6px;padding:6px 10px;color:#0a7a6b;">
         Muestra este QR al recoger tu pedido.<br>Válido de lunes a sábado.
